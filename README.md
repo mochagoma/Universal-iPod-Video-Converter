@@ -1,5 +1,5 @@
 # Universal iPod Video Converter
-A terminal wizard to make videos work on any iPod, whether or not with real Apple firmware. Choose the model, the fitting mode and the volume boost you want and it creates the precise ffmpeg settings required for your device. It supports batch folders and keyboard navigation. Designed to make videos on unsupported iPods easier.
+A terminal wizard to make videos work on any iPod, whether or not with real Apple firmware. Choose the model, the fitting mode and the volume boost you want and it creates the precise ffmpeg settings required for your device. It supports batch folders and keyboard navigation. Designed to make videos on all iPods (especially the unsupported ones) easier.
 
 ## Features
 - Supports Rockbox MPEG-1 video playback
