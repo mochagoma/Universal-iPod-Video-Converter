@@ -1,7 +1,7 @@
-# ** Universal iPod Video Converter **
-A terminal wizard to make videos work on any iPod, whether or not with real Apple firmware. Choose the model, the fitting mode and the volume boost you want and it creates the precise ffmpeg settings required for your device. It supports batch folders and keyboard navigation.
+# Universal iPod Video Converter
+A terminal wizard to make videos work on any iPod, whether or not with real Apple firmware. Choose the model, the fitting mode and the volume boost you want and it creates the precise ffmpeg settings required for your device. It supports batch folders and keyboard navigation. Designed to make videos on unsupported iPods easier.
 
-## ** Features **
+## Features
 - Supports Rockbox MPEG-1 video playback
 - Supports official Apple firmware H.264 video playback
 - Device-specific presets for supported iPods
@@ -13,7 +13,7 @@ A terminal wizard to make videos work on any iPod, whether or not with real Appl
 - Input validation and detailed error reporting
 - Cleans up failed or corrupted output files
 
-## ** Requirements **
+## Requirements 
 - Bash
 - FFmpeg + FFprobe
 - `bc`
@@ -22,7 +22,7 @@ A terminal wizard to make videos work on any iPod, whether or not with real Appl
 
 > For official Apple firmware conversion, FFmpeg must include `libx264` support.
 
-## ** Installation **
+## Installation
 
 Clone the repository:
 
@@ -43,7 +43,7 @@ Run the converter:
 ./ipod-video-converter.sh
 ```
 
-## ** Usage **
+## Usage
 
 1. Select a source video file or folder
 2. Choose an output destination
@@ -57,7 +57,7 @@ Run the converter:
 
 The converter will automatically generate a video optimized for your selected iPod.
 
-## ** Supported Devices **
+## Supported Devices
 
 ### Rockbox
 
@@ -80,14 +80,14 @@ The converter will automatically generate a video optimized for your selected iP
 | iPod Nano (5th Gen) | 376×240 | H.264/AAC `.m4v` |
 | iPod Nano (7th Gen) | 432×240 | H.264/AAC `.m4v` |
 
-## ** Notes **
+## Notes
 
 - This tool only converts videos. It does **not** install Rockbox or modify iPod firmware.
 - Rockbox mode creates files for the Rockbox `mpegplayer` plugin.
 - Official firmware mode creates `.m4v` files intended for Apple-compatible syncing.
 - iPod Nano 6th Gen is not supported because it removed video playback.
 
-## ** Troubleshooting **
+## Troubleshooting
 
 ### FFmpeg is missing
 
@@ -123,7 +123,7 @@ If it detects corrupted quotes or invalid syntax:
 2. Avoid editing `.sh` files in TextEdit, Notes, or Pages
 3. Use a plain-text editor such as VS Code, BBEdit, or nano
 
-## ** Changelog **
+## Changelog
 
 See the [Releases](../../releases) page for version history.
 
