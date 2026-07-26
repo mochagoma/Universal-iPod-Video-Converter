@@ -22,6 +22,13 @@ A terminal wizard to make videos work on any iPod, whether or not with real Appl
 
 > For official Apple firmware conversion, FFmpeg must include `libx264` support.
 
+## Dependencies
+
+This project uses FFmpeg, which is licensed separately.
+FFmpeg is not included with this project and must be installed independently.
+
+- FFmpeg: https://ffmpeg.org/
+
 ## **Installation**
 
 Clone the repository:
