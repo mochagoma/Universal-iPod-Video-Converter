@@ -24,10 +24,20 @@ A terminal wizard to make videos work on any iPod, whether or not with real Appl
 
 ## Dependencies
 
-This project uses FFmpeg, which is licensed separately.
-FFmpeg is not included with this project and must be installed independently.
+This project relies on the following external software:
 
-- FFmpeg: https://ffmpeg.org/
+- [Bash](https://www.gnu.org/software/bash/)
+- [FFmpeg / FFprobe](https://ffmpeg.org/)
+- `bc`
+- Standard Unix command-line utilities:
+  - `find`
+  - `grep`
+  - `sed`
+  - `stat`
+  - `mktemp`
+  - `tput`
+
+These dependencies are not included with this project and remain licensed separately under their respective licenses.
 
 ## Installation
 
