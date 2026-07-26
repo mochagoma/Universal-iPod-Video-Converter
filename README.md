@@ -46,13 +46,19 @@ Run the converter:
 ## **Usage**
 
 **1.** Select a source video file or folder
+
 **2.** Choose an output destination
+
 **3.** Select the target firmware:
    - Rockbox
    - Official Apple firmware
+
 **4.** Select your iPod model
+     
 **5.** Choose video fitting mode
+
 **6.** Choose audio settings
+
 **7.** Wait for conversion to finish
 
 **__The converter will automatically generate a video optimized for your selected iPod.__**
