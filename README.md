@@ -68,7 +68,7 @@ Run the converter:
 
 **7.** Wait for conversion to finish
 
-**__The converter will automatically generate a video optimized for your selected iPod.__**
+**The converter will automatically generate a video optimized for your selected iPod.**
 
 ## Supported Devices
 
@@ -143,4 +143,4 @@ See the [Releases](../../releases) page for version history.
 
 ## License
 
-**__MIT License__**
+**MIT License**
