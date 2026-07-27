@@ -1,8 +1,7 @@
-# Universal iPod Video Converter
-A free, open-source Bash utility for converting videos to formats compatible with legacy click wheel iPods. It supports both Rockbox MPEG-1 playback and official Apple firmware H.264 playback using FFmpeg-powered, device-specific presets.
+# Universal-iPod-Video-Converter
+A free, open-source Bash utility for converting videos to formats compatible with legacy clickwheel iPods. It supports both Rockbox MPEG-1 playback and official Apple firmware H.264 playback using FFmpeg-powered, device-specific presets.
 
 > [!NOTE]
-
 > This tool converts videos only. It does not install Rockbox or modify your iPod's firmware.
 
 <img width="480" height="377" alt="Usage-Example" src="https://github.com/user-attachments/assets/17179118-50a5-423d-b5ff-5bf71885a71d" />
@@ -54,6 +53,36 @@ git clone https://github.com/mochagoma/Universal-iPod-Video-Converter.git
 cd Universal-iPod-Video-Converter
 ```
 
+### Install FFmpeg
+
+#### macOS
+
+If you already have Homebrew installed:
+
+```bash
+brew install ffmpeg
+```
+
+If you don't have Homebrew installed:
+
+1. Install Homebrew:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+2. Install FFmpeg:
+
+```bash
+brew install ffmpeg
+```
+
+#### Linux
+
+```bash
+sudo apt install ffmpeg
+```
+
 Make the script executable:
 
 ```bash
@@ -63,7 +92,7 @@ chmod +x Uni-iPod-Converter.sh
 Run the converter:
 
 ```bash
-./Uni-iPod-Converter.sh 
+./Uni-iPod-Converter.sh
 ```
 
 ## Usage
@@ -73,11 +102,11 @@ Run the converter:
 **2.** Choose an output destination
 
 **3.** Select the target firmware:
-   - Rockbox
-   - Official Apple firmware
+- Rockbox
+- Official Apple firmware
 
 **4.** Select your iPod model
-     
+
 **5.** Choose video fitting mode
 
 **6.** Choose audio settings
@@ -115,13 +144,13 @@ Run the converter:
 - Rockbox mode creates files for the Rockbox `mpegplayer` plugin.
 - Official firmware mode creates `.m4v` files intended for Apple-compatible syncing.
 - iPod Nano 6th Gen is not supported because it removed video playback.
-- All iPod Touch models are not supported, this tool only supports legacy clickwheel iPods.
+- All iPod Touch models are not supported; this tool only supports legacy clickwheel iPods.
 
-# Troubleshooting
+## Troubleshooting
 
-## FFmpeg is missing
+### FFmpeg is missing
 
-### macOS
+#### macOS
 
 If you already have Homebrew installed:
 
@@ -137,13 +166,13 @@ If you don't have Homebrew installed:
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-2. Then install FFmpeg:
+2. Install FFmpeg:
 
 ```bash
 brew install ffmpeg
 ```
 
-### Linux
+#### Linux
 
 ```bash
 sudo apt install ffmpeg
@@ -163,13 +192,14 @@ The converter performs a syntax check before running.
 
 If it detects corrupted quotes or invalid syntax:
 
-1. Download a fresh copy
-2. Avoid editing `.sh` files in TextEdit, Notes, or Pages
-3. Use a plain-text editor such as VS Code, BBEdit, or nano
+1. Download a fresh copy.
+2. Avoid editing `.sh` files in TextEdit, Notes, or Pages.
+3. Use a plain-text editor such as VS Code, BBEdit, or nano.
 
 ## Changelog
 
 See the [**Releases**](../../releases) page for version history.
 
 ## License
+
 [**MIT License**](../../blob/main/LICENSE)
