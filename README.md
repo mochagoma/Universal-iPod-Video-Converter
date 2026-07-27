@@ -29,7 +29,8 @@ A free, open-source Bash utility for converting videos to formats compatible wit
       - [The script says it is corrupted](#the-script-says-it-is-corrupted)
    - [Changelog](#changelog)
    - [License](#license)
-<details>
+
+</details>
 
 ## Features
 - Supports Rockbox MPEG-1 video playback
