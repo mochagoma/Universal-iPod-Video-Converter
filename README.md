@@ -28,8 +28,8 @@ A terminal wizard to make videos work on any iPod, whether or not with real Appl
 
 This project relies on the following external software:
 
-- [Bash](https://www.gnu.org/software/bash/)
-- [FFmpeg / FFprobe](https://ffmpeg.org/)
+- [**Bash**](https://www.gnu.org/software/bash/)
+- [**FFmpeg / FFprobe**](https://ffmpeg.org/)
 - `bc`
 - Standard Unix command-line utilities:
   - `find`
