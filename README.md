@@ -111,7 +111,7 @@ Run the converter:
 - Rockbox mode creates files for the Rockbox `mpegplayer` plugin.
 - Official firmware mode creates `.m4v` files intended for Apple-compatible syncing.
 - iPod Nano 6th Gen is not supported because it removed video playback.
-- All iPod Touch models are not supported, this tool is only for legacy clickwheel iPods
+- All iPod Touch models are not supported, this tool only supports legacy clickwheel iPods.
 
 ## Troubleshooting
 
