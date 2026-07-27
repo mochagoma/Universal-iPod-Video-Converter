@@ -115,7 +115,7 @@ Run the converter:
 
 ## Troubleshooting
 
-## FFmpeg is missing
+### FFmpeg is missing
 
 ### macOS
 
