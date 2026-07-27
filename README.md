@@ -6,6 +6,31 @@ A free, open-source Bash utility for converting videos to formats compatible wit
 
 <img width="480" height="377" alt="Usage-Example" src="https://github.com/user-attachments/assets/17179118-50a5-423d-b5ff-5bf71885a71d" />
 
+<details>
+<summary><strong>### Table of Contents</strong></summary>
+* [Universal-iPod-Video-Converter](#universal-ipod-video-converter)
+   * [Features](#features)
+   * [Requirements](#requirements)
+   * [Dependencies](#dependencies)
+   * [Installation](#installation)
+      * [Install FFmpeg](#install-ffmpeg)
+         * [macOS](#macos)
+         * [Linux](#linux)
+   * [Usage](#usage)
+   * [Supported Devices](#supported-devices)
+      * [Rockbox](#rockbox)
+      * [Official Apple Firmware](#official-apple-firmware)
+   * [Notes](#notes)
+   * [Troubleshooting](#troubleshooting)
+      * [FFmpeg is missing](#ffmpeg-is-missing)
+         * [macOS](#macos-1)
+         * [Linux](#linux-1)
+      * [Official firmware conversion fails](#official-firmware-conversion-fails)
+      * [The script says it is corrupted](#the-script-says-it-is-corrupted)
+   * [Changelog](#changelog)
+   * [License](#license)
+   <details>
+
 ## Features
 - Supports Rockbox MPEG-1 video playback
 - Supports official Apple firmware H.264 video playback
