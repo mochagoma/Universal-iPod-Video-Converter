@@ -151,7 +151,7 @@ If it detects corrupted quotes or invalid syntax:
 
 ## Changelog
 
-See the [Releases](../../releases) page for version history.
+See the [**Releases**](../../releases) page for version history.
 
 ## License
 [**MIT License**](../../blob/main/LICENSE)
