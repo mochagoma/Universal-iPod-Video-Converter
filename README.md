@@ -9,7 +9,6 @@ A free, open-source Bash utility for converting videos to formats compatible wit
 <details>
 <summary><strong>Table of Contents</strong></summary>
   
-- [Universal-iPod-Video-Converter](#universal-ipod-video-converter)
    - [Features](#features)
    - [Requirements](#requirements)
    - [Dependencies](#dependencies)
@@ -30,7 +29,8 @@ A free, open-source Bash utility for converting videos to formats compatible wit
       - [The script says it is corrupted](#the-script-says-it-is-corrupted)
    - [Changelog](#changelog)
    - [License](#license)
-  
+<details>
+
 ## Features
 - Supports Rockbox MPEG-1 video playback
 - Supports official Apple firmware H.264 video playback
