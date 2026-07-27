@@ -6,6 +6,7 @@ A free, open-source Bash utility for converting videos to formats compatible wit
 
 <img width="480" height="377" alt="Usage-Example" src="https://github.com/user-attachments/assets/17179118-50a5-423d-b5ff-5bf71885a71d" />
 
+<br>
 
 <details>
 <summary><strong>Table of Contents</strong></summary>
