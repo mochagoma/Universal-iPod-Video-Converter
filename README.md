@@ -1,4 +1,4 @@
-# Universal-iPod-Video-Converter
+# Universal iPod Video Converter
 A free, open-source Bash utility for converting videos to formats compatible with legacy clickwheel iPods. It supports both Rockbox MPEG-1 playback and official Apple firmware H.264 playback using FFmpeg-powered, device-specific presets.
 
 > [!NOTE]
