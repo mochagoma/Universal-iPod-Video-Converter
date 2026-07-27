@@ -31,8 +31,8 @@ A free, open-source Bash utility for converting videos to formats compatible wit
 
 This project relies on the following external software:
 
-- [**Bash**](https://www.gnu.org/software/bash/)
-- [**FFmpeg / FFprobe**](https://ffmpeg.org/)
+- [Bash](https://www.gnu.org/software/bash/)
+- [FFmpeg / FFprobe](https://ffmpeg.org/)
 - `bc`
 - Standard Unix command-line utilities:
   - `find`
@@ -198,8 +198,8 @@ If it detects corrupted quotes or invalid syntax:
 
 ## Changelog
 
-See the [**Releases**](../../releases) page for version history.
+See the [Releases](../../releases) page for version history.
 
 ## License
 
-[**MIT License**](../../blob/main/LICENSE)
+[MIT License](../../blob/main/LICENSE)
