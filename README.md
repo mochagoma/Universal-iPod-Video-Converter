@@ -7,30 +7,30 @@ A free, open-source Bash utility for converting videos to formats compatible wit
 <img width="480" height="377" alt="Usage-Example" src="https://github.com/user-attachments/assets/17179118-50a5-423d-b5ff-5bf71885a71d" />
 
 <details>
-<summary><strong>### Table of Contents</strong></summary>
-* [Universal-iPod-Video-Converter](#universal-ipod-video-converter)
-   * [Features](#features)
-   * [Requirements](#requirements)
-   * [Dependencies](#dependencies)
-   * [Installation](#installation)
-      * [Install FFmpeg](#install-ffmpeg)
-         * [macOS](#macos)
-         * [Linux](#linux)
-   * [Usage](#usage)
-   * [Supported Devices](#supported-devices)
-      * [Rockbox](#rockbox)
-      * [Official Apple Firmware](#official-apple-firmware)
-   * [Notes](#notes)
-   * [Troubleshooting](#troubleshooting)
-      * [FFmpeg is missing](#ffmpeg-is-missing)
-         * [macOS](#macos-1)
-         * [Linux](#linux-1)
-      * [Official firmware conversion fails](#official-firmware-conversion-fails)
-      * [The script says it is corrupted](#the-script-says-it-is-corrupted)
-   * [Changelog](#changelog)
-   * [License](#license)
-   <details>
-
+<summary><strong>Table of Contents</strong></summary>
+  
+- [Universal-iPod-Video-Converter](#universal-ipod-video-converter)
+   - [Features](#features)
+   - [Requirements](#requirements)
+   - [Dependencies](#dependencies)
+   - [Installation](#installation)
+      - [Install FFmpeg](#install-ffmpeg)
+         - [macOS](#macos)
+         - [Linux](#linux)
+   - [Usage](#usage)
+   - [Supported Devices](#supported-devices)
+      - [Rockbox](#rockbox)
+      - [Official Apple Firmware](#official-apple-firmware)
+   - [Notes](#notes)
+   - [Troubleshooting](#troubleshooting)
+      - [FFmpeg is missing](#ffmpeg-is-missing)
+         - [macOS](#macos-1)
+         - [Linux](#linux-1)
+      - [Official firmware conversion fails](#official-firmware-conversion-fails)
+      - [The script says it is corrupted](#the-script-says-it-is-corrupted)
+   - [Changelog](#changelog)
+   - [License](#license)
+  
 ## Features
 - Supports Rockbox MPEG-1 video playback
 - Supports official Apple firmware H.264 video playback
@@ -122,23 +122,23 @@ Run the converter:
 
 ## Usage
 
-**1.** Select a source video file or folder
+--1.-- Select a source video file or folder
 
-**2.** Choose an output destination
+--2.-- Choose an output destination
 
-**3.** Select the target firmware:
+--3.-- Select the target firmware:
 - Rockbox
 - Official Apple firmware
 
-**4.** Select your iPod model
+--4.-- Select your iPod model
 
-**5.** Choose video fitting mode
+--5.-- Choose video fitting mode
 
-**6.** Choose audio settings
+--6.-- Choose audio settings
 
-**7.** Wait for conversion to finish
+--7.-- Wait for conversion to finish
 
-**The converter will automatically generate a video optimized for your selected iPod.**
+--The converter will automatically generate a video optimized for your selected iPod.--
 
 ## Supported Devices
 
@@ -165,7 +165,7 @@ Run the converter:
 
 ## Notes
 
-- This tool only converts videos. It does **not** install Rockbox or modify iPod firmware.
+- This tool only converts videos. It does --not-- install Rockbox or modify iPod firmware.
 - Rockbox mode creates files for the Rockbox `mpegplayer` plugin.
 - Official firmware mode creates `.m4v` files intended for Apple-compatible syncing.
 - iPod Nano 6th Gen is not supported because it removed video playback.
