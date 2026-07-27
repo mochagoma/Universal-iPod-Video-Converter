@@ -150,7 +150,7 @@ Run the converter:
 ### Rockbox
 
 | Device | Resolution | Format |
-| **- | **- | **- |
+| --- | --- | --- |
 | iPod Mini (1st/2nd Gen) | 138×110 | MPEG-1 `.mpg` |
 | iPod Nano (1st/2nd Gen) | 176×132 | MPEG-1 `.mpg` |
 | iPod 4th Gen Monochrome | 160×128 | MPEG-1 `.mpg` |
@@ -161,7 +161,7 @@ Run the converter:
 ### Official Apple Firmware
 
 | Device | Resolution | Format |
-| **- | **- | **- |
+| --- | --- | --- |
 | iPod Video (5th/5.5 Gen) | 320×240 | H.264/AAC `.m4v` |
 | iPod Classic (6th/6.5/7th Gen) | 320×240 | H.264/AAC `.m4v` |
 | iPod Nano (3rd/4th Gen) | 320×240 | H.264/AAC `.m4v` |
