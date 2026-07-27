@@ -8,7 +8,7 @@ A free, open-source Bash utility for converting videos to formats compatible wit
 
 
 <details>
-<summary><strong>**Table of Contents**</strong></summary>
+<summary><strong>Table of Contents</strong></summary>
   
    - [Features](#features)
    - [Requirements](#requirements)
