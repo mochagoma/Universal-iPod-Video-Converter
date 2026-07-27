@@ -113,7 +113,7 @@ Run the converter:
 - iPod Nano 6th Gen is not supported because it removed video playback.
 - All iPod Touch models are not supported, this tool only supports legacy clickwheel iPods.
 
-## Troubleshooting
+# Troubleshooting
 
 ## FFmpeg is missing
 
