@@ -46,20 +46,20 @@ These dependencies are not included with this project and remain licensed separa
 Clone the repository:
 
 ```bash
-git clone https://github.com/USERNAME/REPOSITORY.git
-cd REPOSITORY
+git clone https://github.com/mochagoma/Universal-iPod-Video-Converter.git
+cd Universal-iPod-Video-Converter
 ```
 
 Make the script executable:
 
 ```bash
-chmod +x ipod-video-converter.sh
+chmod +x Uni-iPod-Converter-260.sh
 ```
 
 Run the converter:
 
 ```bash
-./ipod-video-converter.sh
+./Uni-iPod-Converter-260.sh 
 ```
 
 ## Usage
