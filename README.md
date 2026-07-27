@@ -154,5 +154,4 @@ If it detects corrupted quotes or invalid syntax:
 See the [Releases](../../releases) page for version history.
 
 ## License
-
-**MIT License**
+[**MIT License**](../../blob/main/LICENSE)
