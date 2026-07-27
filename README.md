@@ -115,17 +115,31 @@ Run the converter:
 
 ## Troubleshooting
 
-### FFmpeg is missing
+## FFmpeg is missing
 
-Install FFmpeg:
+### macOS
 
-**macOS:**
+If you already have Homebrew installed:
 
 ```bash
 brew install ffmpeg
 ```
 
-**Linux:**
+If you don't have Homebrew installed:
+
+1. Install Homebrew:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+2. Then install FFmpeg:
+
+```bash
+brew install ffmpeg
+```
+
+### Linux
 
 ```bash
 sudo apt install ffmpeg
