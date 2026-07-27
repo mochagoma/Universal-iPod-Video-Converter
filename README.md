@@ -53,13 +53,13 @@ cd Universal-iPod-Video-Converter
 Make the script executable:
 
 ```bash
-chmod +x Uni-iPod-Converter-260.sh
+chmod +x Uni-iPod-Converter.sh
 ```
 
 Run the converter:
 
 ```bash
-./Uni-iPod-Converter-260.sh 
+./Uni-iPod-Converter.sh 
 ```
 
 ## Usage
