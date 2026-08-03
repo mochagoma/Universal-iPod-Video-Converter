@@ -2,6 +2,32 @@
 
 # Universal iPod Video Conversion Tool (Rockbox + Official Apple Firmware)
 # Programmed by Elliott Schott
+# Version 2.7.0
+# Changelog 2.7.0: Fixed a bug where official-firmware (H.264/AAC) conversions
+#                   could develop a high-pitched squeal/chirp every 30-60
+#                   seconds - this is a documented defect in ffmpeg's built-in
+#                   "aac" encoder (its Perceptual Noise Substitution logic
+#                   mis-fires on certain high-frequency/transient content,
+#                   e.g. sibilant speech), so it's now disabled, plus a
+#                   15kHz cutoff is set to keep the encoder out of the
+#                   problematic near-Nyquist range it handles poorly at
+#                   these bitrates - both are skipped gracefully on ffmpeg
+#                   builds too old to support the option. Dependency check
+#                   now also verifies "bc" (used throughout for all bitrate/
+#                   progress math) and shows a live checklist instead of a
+#                   static "please wait", with install hints that adapt to
+#                   apt/dnf/pacman/apk in addition to Homebrew. Every iPod
+#                   resolution and H.264 profile/level was re-verified a
+#                   second time directly against Apple's archived tech-spec
+#                   pages - all were already correct, no changes needed.
+#                   Source/destination path errors are now more specific
+#                   (permission-denied vs. does-not-exist vs. wrong-type),
+#                   and a failed output-folder creation now shows the
+#                   actual OS error instead of a generic message. Added a
+#                   dot-based step indicator (Step 1-4) and a total-elapsed-
+#                   time line on the finish screen. Replaced "OR" in
+#                   "Enter path to source video OR folder:" with lowercase
+#                   "or".
 # Version 2.6.0
 # Changelog 2.6.0: Added a self-syntax-check at launch so a corrupted file
 #                   (e.g. from a text editor smart-quoting it) fails
@@ -61,59 +87,6 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-clear
-echo "Checking Dependencies..."
-echo "Please wait."
-
-# Self-check: verify this file wasn't corrupted before doing any real work.
-# The most common cause is a text editor "smart-quoting" it (TextEdit,
-# Notes, and Pages all do this by default to .sh files opened for editing
-# on macOS), which silently turns straight quotes into curly ones and
-# breaks every string literal after that point. Without this check, a
-# corrupted file can run several menus successfully - since a live script
-# run only fails once it actually reaches the bad code - and then crash
-# with a raw, confusing shell error deep inside the wizard instead of
-# failing clearly up front.
-if ! SYNTAX_CHECK=$(bash -n "$0" 2>&1); then
-    clear
-    printf "\e[41m Error: \e[0m This script file looks corrupted or was edited by\n"
-    printf "something that changed plain quotes into curly \"smart quotes\" -\n"
-    printf "a common side effect of opening .sh files in TextEdit, Notes, or\n"
-    printf "Pages on macOS.\n\n"
-    printf "Please re-download a fresh copy, and if you need to edit it, use a\n"
-    printf "plain-text editor instead (e.g. VS Code, BBEdit, nano).\n\n"
-    printf "\e[2mDetails: %s\e[0m\n\n" "$SYNTAX_CHECK"
-    printf "\e[30;47m> [OK]\e[0m\n"
-    printf "\e[?25h"
-    read -r
-    exit 1
-fi
-
-command -v brew >/dev/null 2>&1 && BREW_INSTALLED=true || BREW_INSTALLED=false
-
-if ! command -v ffmpeg >/dev/null 2>&1; then
-    clear
-    printf "\e[41m Error: \e[0m This script requires \e[1mffmpeg\e[22m.\n"
-    [ "$BREW_INSTALLED" = true ] && echo && echo "brew install ffmpeg"
-    echo
-    printf "\e[30;47m> [OK]\e[0m\n"
-    printf "\e[?25h"
-    read -r
-    exit 1
-fi
-
-if ! command -v ffprobe >/dev/null 2>&1; then
-    clear
-    printf "\e[41m Error: \e[0m This script requires \e[1mffprobe\e[22m, which normally\n"
-    printf "installs alongside ffmpeg - your install may be incomplete.\n"
-    [ "$BREW_INSTALLED" = true ] && echo && echo "brew reinstall ffmpeg"
-    echo
-    printf "\e[30;47m> [OK]\e[0m\n"
-    printf "\e[?25h"
-    read -r
-    exit 1
-fi
-
 # Function to center text based on current terminal columns
 print_center() {
     local text="$1"
@@ -147,7 +120,7 @@ print_center_line() {
 draw_header() {
     clear
     print_center "=== Universal iPod Video Converter ==="
-    print_center "=== Version \033[1m2.6.0\033[22m ==="
+    print_center "=== Version \033[1m2.7.0\033[22m ==="
     print_center_line
     if [ -n "$IS_ROCKBOX" ]; then
         if [ "$IS_ROCKBOX" = true ]; then
@@ -157,6 +130,126 @@ draw_header() {
         fi
     fi
     echo
+}
+
+draw_header
+print_center "Checking dependencies..."
+echo
+
+# Self-check: verify this file wasn't corrupted before doing any real work.
+# The most common cause is a text editor "smart-quoting" it (TextEdit,
+# Notes, and Pages all do this by default to .sh files opened for editing
+# on macOS), which silently turns straight quotes into curly ones and
+# breaks every string literal after that point. Without this check, a
+# corrupted file can run several menus successfully - since a live script
+# run only fails once it actually reaches the bad code - and then crash
+# with a raw, confusing shell error deep inside the wizard instead of
+# failing clearly up front.
+if ! SYNTAX_CHECK=$(bash -n "$0" 2>&1); then
+    clear
+    printf "\e[41m Error: \e[0m This script file looks corrupted or was edited by\n"
+    printf "something that changed plain quotes into curly \"smart quotes\" -\n"
+    printf "a common side effect of opening .sh files in TextEdit, Notes, or\n"
+    printf "Pages on macOS.\n\n"
+    printf "Please re-download a fresh copy, and if you need to edit it, use a\n"
+    printf "plain-text editor instead (e.g. VS Code, BBEdit, nano).\n\n"
+    printf "\e[2mDetails: %s\e[0m\n\n" "$SYNTAX_CHECK"
+    printf "\e[30;47m> [OK]\e[0m\n"
+    printf "\e[?25h"
+    read -r
+    exit 1
+fi
+
+command -v brew >/dev/null 2>&1 && BREW_INSTALLED=true || BREW_INSTALLED=false
+
+# Suggests a platform-appropriate install command for a missing dependency
+# instead of only ever assuming Homebrew - the old version gave no install
+# hint at all when running on Linux, which this script also supports.
+suggest_install() {
+    local pkg="$1"
+    if [ "$BREW_INSTALLED" = true ]; then
+        echo "brew install $pkg"
+    elif command -v apt >/dev/null 2>&1; then
+        echo "sudo apt install $pkg"
+    elif command -v dnf >/dev/null 2>&1; then
+        echo "sudo dnf install $pkg"
+    elif command -v pacman >/dev/null 2>&1; then
+        echo "sudo pacman -S $pkg"
+    elif command -v apk >/dev/null 2>&1; then
+        echo "sudo apk add $pkg"
+    fi
+}
+
+DEPS_OK=true
+
+if command -v ffmpeg >/dev/null 2>&1; then
+    printf "  \e[32m✓\e[0m ffmpeg\n"
+else
+    printf "  \e[31m✗\e[0m ffmpeg\n"
+    DEPS_OK=false
+fi
+
+if command -v ffprobe >/dev/null 2>&1; then
+    printf "  \e[32m✓\e[0m ffprobe\n"
+else
+    printf "  \e[31m✗\e[0m ffprobe\n"
+    DEPS_OK=false
+fi
+
+# bc drives every bit of bitrate/percentage/ETA math further down. Without
+# it, those calculations used to silently return an empty string (e.g. a
+# blank bitrate handed straight to ffmpeg), which failed confusingly deep
+# inside the conversion instead of with a clear message right here.
+if command -v bc >/dev/null 2>&1; then
+    printf "  \e[32m✓\e[0m bc\n"
+else
+    printf "  \e[31m✗\e[0m bc\n"
+    DEPS_OK=false
+fi
+
+if [ "$DEPS_OK" = false ]; then
+    echo
+    printf "\e[41m Error: \e[0m Missing one or more required tools above.\n\n"
+
+    if ! command -v ffmpeg >/dev/null 2>&1; then
+        HINT=$(suggest_install ffmpeg)
+        [ -n "$HINT" ] && echo "  $HINT"
+    elif ! command -v ffprobe >/dev/null 2>&1; then
+        echo "  ffprobe normally installs alongside ffmpeg, so your ffmpeg"
+        echo "  install looks incomplete - try reinstalling it."
+        [ "$BREW_INSTALLED" = true ] && echo "  (brew reinstall ffmpeg)"
+    fi
+
+    if ! command -v bc >/dev/null 2>&1; then
+        HINT=$(suggest_install bc)
+        [ -n "$HINT" ] && echo "  $HINT"
+    fi
+
+    echo
+    printf "\e[30;47m> [OK]\e[0m\n"
+    printf "\e[?25h"
+    read -r
+    exit 1
+fi
+
+# Prints a small dot progress indicator for the 4-step wizard
+# (green/filled = done, cyan/filled = current, dim/hollow = upcoming).
+draw_step_dots() {
+    local current=$1
+    local total=4
+    local dots=""
+    local i
+    for ((i = 1; i <= total; i++)); do
+        if [ "$i" -eq "$current" ]; then
+            dots+="\e[36m●\e[0m"
+        elif [ "$i" -lt "$current" ]; then
+            dots+="\e[32m●\e[0m"
+        else
+            dots+="\e[2m○\e[0m"
+        fi
+        [ "$i" -lt "$total" ] && dots+=" "
+    done
+    printf "%b  \e[2mStep %d of %d\e[0m\n" "$dots" "$current" "$total"
 }
 
 # Helper function to read keyboard entries
@@ -344,7 +437,7 @@ while true; do
     draw_header
     IS_BATCH=false
     printf "\e[?25h"
-    read -r -p "Enter path to source video OR folder: " INPUT
+    read -r -p "Enter path to source video or folder: " INPUT
     printf "\e[?25l"
     INPUT="${INPUT%\"}"
     INPUT="${INPUT#\"}"
@@ -352,6 +445,11 @@ while true; do
     [ -z "$INPUT" ] && echo "No input provided." && sleep 1 && continue
     
     if [ -d "$INPUT" ]; then
+        if [ ! -r "$INPUT" ]; then
+            printf "\e[31mCan't read the folder \"%s\" - check its permissions.\e[0m\n" "$(basename "$INPUT")"
+            sleep 1.8
+            continue
+        fi
         FOLDER_NAME=$(basename "$INPUT")
 
         # Supported input container formats. (Deliberately NOT including .mpg/.mpeg:
@@ -387,8 +485,17 @@ while true; do
         IS_BATCH=true
         break
     elif [ -f "$INPUT" ]; then
+        if [ ! -r "$INPUT" ]; then
+            printf "\e[31mCan't read \"%s\" - check the file's permissions.\e[0m\n" "$(basename "$INPUT")"
+            sleep 1.8
+            continue
+        fi
         IS_BATCH=false
         break
+    elif [ -e "$INPUT" ]; then
+        printf "\e[31m\"%s\" isn't a file or folder this tool can use.\e[0m\n" "$(basename "$INPUT")"
+        sleep 1.8
+        continue
     else
         echo "Path doesn't exist."
         sleep 1
@@ -472,7 +579,7 @@ while [ "$MENU_STEP" -ge 1 ] && [ "$MENU_STEP" -le 4 ]; do
     case $MENU_STEP in
         1)
             clear
-            printf "\e[2mStep 1 of 4\e[0m\n"
+            draw_step_dots 1
             printf "\e[1mIs the target device running Rockbox?\e[0m\n"
             printf "\e[2m(If you don't know, select No.)\e[0m\n\n"
             draw_rockbox_screen
@@ -518,6 +625,19 @@ while [ "$MENU_STEP" -ge 1 ] && [ "$MENU_STEP" -le 4 ]; do
                             printf "\e[?25l"
                             break # leave MENU_STEP at 1, re-show this step
                         fi
+
+                        # One-time capability probe for the aac_pns option (see the
+                        # ENC_ARGS comment further down for what this fixes and why).
+                        # Checked once here rather than every file so the per-file
+                        # loop doesn't re-run ffmpeg's help output on each pass.
+                        if [ -z "$AAC_PNS_CHECKED" ]; then
+                            AAC_PNS_CHECKED=true
+                            if ffmpeg -hide_banner -h encoder=aac 2>/dev/null | grep -q aac_pns; then
+                                AAC_PNS_SUPPORTED=true
+                            else
+                                AAC_PNS_SUPPORTED=false
+                            fi
+                        fi
                     fi
                     ipod_selected=0
                     IPOD_BACK_IDX=${#ipod_models[@]}
@@ -531,7 +651,7 @@ while [ "$MENU_STEP" -ge 1 ] && [ "$MENU_STEP" -le 4 ]; do
             ;;
         2)
             clear
-            printf "\e[2mStep 2 of 4\e[0m\n"
+            draw_step_dots 2
             printf "\e[1mSelect your iPod Target Hardware:\e[0m\n\n"
             draw_ipod_menu
 
@@ -563,7 +683,7 @@ while [ "$MENU_STEP" -ge 1 ] && [ "$MENU_STEP" -le 4 ]; do
             ;;
         3)
             clear
-            printf "\e[2mStep 3 of 4\e[0m\n"
+            draw_step_dots 3
             printf "\e[1mSelect video fitting mode:\e[0m\n\n"
             draw_menu
 
@@ -595,7 +715,7 @@ while [ "$MENU_STEP" -ge 1 ] && [ "$MENU_STEP" -le 4 ]; do
             ;;
         4)
             clear
-            printf "\e[2mStep 4 of 4\e[0m\n"
+            draw_step_dots 4
             printf "\e[1mSelect audio volume boost level:\e[0m\n\n"
             draw_vol_menu
 
@@ -798,11 +918,15 @@ if [ "$IS_BATCH" = true ] || [ -d "$OUTPUT" ]; then
 else
     OUTPUT_WRITE_CHECK_DIR=$(dirname "$OUTPUT")
 fi
-mkdir -p "$OUTPUT_WRITE_CHECK_DIR" 2>/dev/null
+MKDIR_ERR=$(mkdir -p "$OUTPUT_WRITE_CHECK_DIR" 2>&1)
 if [ ! -w "$OUTPUT_WRITE_CHECK_DIR" ]; then
     clear
     printf "\e[31mError:\e[0m Can't write to \"%s\".\n" "$OUTPUT_WRITE_CHECK_DIR"
-    printf "Check the path exists and that you have permission to write there.\n\n"
+    if [ -n "$MKDIR_ERR" ]; then
+        printf "\e[2m%s\e[0m\n\n" "$MKDIR_ERR"
+    else
+        printf "Check the path exists and that you have permission to write there.\n\n"
+    fi
     printf "\e[30;47m> [OK]\e[0m\n"
     printf "\e[?25h"
     read -r
@@ -813,6 +937,7 @@ TOTAL_FILES=${#FILES_TO_PROCESS[@]}
 CURRENT_FILE_INDEX=0
 SUCCESS_COUNT=0
 SKIPPED_COUNT=0
+RUN_START_TIME=$(date +%s)
 
 # Core Batch File Processing Loop
 for TARGET_INPUT in "${FILES_TO_PROCESS[@]}"; do
@@ -879,7 +1004,17 @@ BITRATE="${CALC_BITRATE}k"
 if [ "$IS_ROCKBOX" = true ]; then
     ENC_ARGS=(-c:v mpeg1video -b:v "$BITRATE" -c:a mp2 -af "$AUDIO_FILTER" -b:a 64k -ar "$AUDIO_RATE" -f mpeg)
 else
-    ENC_ARGS=(-c:v libx264 -profile:v "$H264_PROFILE" -level "$H264_LEVEL" -pix_fmt yuv420p -b:v "$BITRATE" -maxrate "$BITRATE" -bufsize "$((CALC_BITRATE * 2))k" -c:a aac -af "$AUDIO_FILTER" -b:a 128k -ar "$AUDIO_RATE" -movflags +faststart -f mp4)
+    # -cutoff 15000 and -aac_pns 0 fix a real bug in ffmpeg's built-in "aac"
+    # encoder: its Perceptual Noise Substitution can mis-fire on transient
+    # or high-frequency content (sibilant speech, cymbals, etc.), producing
+    # a short high-pitched squeal/chirp wherever that content happens to
+    # land in the source - which on typical dialogue or music is roughly
+    # every 30-60 seconds. Capping the encoded bandwidth at 15kHz (well
+    # above what 128kbps stereo AAC reproduces cleanly anyway, and well
+    # above what stock iPod earbuds resolve) and disabling PNS outright
+    # removes the bug instead of just making it less likely.
+    ENC_ARGS=(-c:v libx264 -profile:v "$H264_PROFILE" -level "$H264_LEVEL" -pix_fmt yuv420p -b:v "$BITRATE" -maxrate "$BITRATE" -bufsize "$((CALC_BITRATE * 2))k" -c:a aac -af "$AUDIO_FILTER" -b:a 128k -ar "$AUDIO_RATE" -cutoff 15000 -movflags +faststart -f mp4)
+    [ "$AAC_PNS_SUPPORTED" = true ] && ENC_ARGS+=(-aac_pns 0)
 fi
 
 clear  # Standard clear, ensuring header title is wiped during conversion cycles
@@ -986,12 +1121,22 @@ done
 
 clear
 
+RUN_ELAPSED=$(( $(date +%s) - RUN_START_TIME ))
+RUN_MIN=$((RUN_ELAPSED / 60))
+RUN_SEC=$((RUN_ELAPSED % 60))
+if [ $RUN_MIN -gt 0 ]; then
+    RUN_TIME_STR="${RUN_MIN}m ${RUN_SEC}s"
+else
+    RUN_TIME_STR="${RUN_SEC}s"
+fi
+
 if [ $SUCCESS_COUNT -eq $TOTAL_FILES ]; then
     if [ "$IS_ROCKBOX" = true ]; then
         printf "\e[32mDone! All %d file(s) are ready for Rockbox.\e[0m\n" "$TOTAL_FILES"
     else
         printf "\e[32mDone! All %d file(s) are ready to sync to your iPod.\e[0m\n" "$TOTAL_FILES"
     fi
+    printf "\e[2mFinished in %s\e[0m\n" "$RUN_TIME_STR"
     # \e[37m sets text color to white
     printf "\e[37mSaved to: %s\e[0m\n\n" "$OUTPUT"
 
@@ -1008,6 +1153,7 @@ else
     if [ "$SKIPPED_COUNT" -gt 0 ]; then
         printf "\e[31m%d skipped as unsupported/unreadable.\e[0m\n" "$SKIPPED_COUNT"
     fi
+    printf "\e[2mFinished in %s\e[0m\n" "$RUN_TIME_STR"
     echo
     [ "$SUCCESS_COUNT" -gt 0 ] && printf "\e[37mSaved to: %s\e[0m\n\n" "$OUTPUT"
 fi
