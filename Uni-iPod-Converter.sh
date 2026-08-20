@@ -2,6 +2,30 @@
 
 # Universal iPod Video Conversion Tool (Rockbox + Official Apple Firmware)
 # Programmed by Elliott Schott
+# Version 2.8.0
+# Changelog 2.8.0: Every error message in the script is now consistently
+#                   red, including ones that were previously plain text
+#                   (missing input/output/URL, bad path, ffmpeg's own
+#                   failure output). The finish screen now lists every
+#                   converted file with its final size in MB. The YouTube
+#                   download is deferred until after the destination path,
+#                   Rockbox gate, hardware, fitting, and volume questions
+#                   are all answered, so it happens once - right before
+#                   conversion starts - instead of immediately after the
+#                   URL is entered, and conversion now begins the instant
+#                   the download finishes with no further prompts. The
+#                   download's progress display was also reworked to
+#                   match the conversion step's look (a block-character
+#                   bar with percentage, ETA, and size) instead of raw
+#                   yt-dlp output, and now labels which playlist item is
+#                   currently downloading when the URL is a playlist. This
+#                   release also adds the source-type menu up front - besides
+#                   converting a local file or folder, you can paste a
+#                   YouTube video or playlist URL and the script downloads it
+#                   via yt-dlp into a temp folder, then runs it through the
+#                   normal conversion pipeline exactly like a local batch
+#                   folder. The temp download folder is deleted automatically
+#                   once conversion finishes or if the script exits.
 # Version 2.7.0
 # Changelog 2.7.0: Fixed a bug where official-firmware (H.264/AAC) conversions
 #                   could develop a high-pitched squeal/chirp every 30-60
@@ -84,6 +108,7 @@ cleanup() {
     printf "\e[?25h"
     stty echo icanon 2>/dev/null
     rm -f "$PROGRESS_LOG" "$ERROR_LOG" 2>/dev/null
+    [ -n "$YT_TEMP_DIR" ] && rm -rf "$YT_TEMP_DIR" 2>/dev/null
 }
 trap cleanup EXIT INT TERM
 
@@ -120,7 +145,7 @@ print_center_line() {
 draw_header() {
     clear
     print_center "=== Universal iPod Video Converter ==="
-    print_center "=== Version \033[1m2.7.0\033[22m ==="
+    print_center "=== Version \033[1m2.8.0\033[22m ==="
     print_center_line
     if [ -n "$IS_ROCKBOX" ]; then
         if [ "$IS_ROCKBOX" = true ]; then
@@ -147,10 +172,10 @@ echo
 # failing clearly up front.
 if ! SYNTAX_CHECK=$(bash -n "$0" 2>&1); then
     clear
-    printf "\e[41m Error: \e[0m This script file looks corrupted or was edited by\n"
-    printf "something that changed plain quotes into curly \"smart quotes\" -\n"
-    printf "a common side effect of opening .sh files in TextEdit, Notes, or\n"
-    printf "Pages on macOS.\n\n"
+    printf "\e[41m Error: \e[0m \e[31mThis script file looks corrupted or was edited by\e[0m\n"
+    printf "\e[31msomething that changed plain quotes into curly \"smart quotes\" -\e[0m\n"
+    printf "\e[31ma common side effect of opening .sh files in TextEdit, Notes, or\e[0m\n"
+    printf "\e[31mPages on macOS.\e[0m\n\n"
     printf "Please re-download a fresh copy, and if you need to edit it, use a\n"
     printf "plain-text editor instead (e.g. VS Code, BBEdit, nano).\n\n"
     printf "\e[2mDetails: %s\e[0m\n\n" "$SYNTAX_CHECK"
@@ -209,7 +234,7 @@ fi
 
 if [ "$DEPS_OK" = false ]; then
     echo
-    printf "\e[41m Error: \e[0m Missing one or more required tools above.\n\n"
+    printf "\e[41m Error: \e[0m \e[31mMissing one or more required tools above.\e[0m\n\n"
 
     if ! command -v ffmpeg >/dev/null 2>&1; then
         HINT=$(suggest_install ffmpeg)
@@ -231,6 +256,84 @@ if [ "$DEPS_OK" = false ]; then
     read -r
     exit 1
 fi
+
+# Returns a file's size formatted as MB with one decimal place, handling
+# both BSD stat (macOS) and GNU stat (Linux) syntax. Shared by the live
+# conversion progress bar and the final converted-files size summary so
+# the two never drift out of sync with each other.
+get_file_size_mb() {
+    local path="$1"
+    local bytes mb
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        bytes=$(stat -f%z "$path" 2>/dev/null)
+    else
+        bytes=$(stat -c%s "$path" 2>/dev/null)
+    fi
+    if [ -z "$bytes" ]; then
+        echo "0.0"
+        return
+    fi
+    mb=$(echo "scale=1; $bytes / 1048576" | bc -l)
+    [[ "$mb" == .* ]] && mb="0$mb"
+    echo "$mb"
+}
+
+get_file_size_bytes() {
+    local path="$1"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        stat -f%z "$path" 2>/dev/null
+    else
+        stat -c%s "$path" 2>/dev/null
+    fi
+}
+
+show_error() {
+    printf "\n\e[31m\e[1mError:\e[22m %s\e[0m\n" "$1"
+    printf "Press \e[1mEnter\e[22m to continue\n"
+    printf "\e[?25h"
+    read -r
+    printf "\e[?25l"
+}
+
+confirm_batch_conversion() {
+    clear
+    printf "\e[1mAre you sure you want to batch convert \"%s\"?\e[0m\n" "$FOLDER_NAME"
+    printf "\e[2m%s video %s found\e[0m\n" "$FILE_COUNT" "$FILE_WORD"
+    printf "\e[2mOutput to: %s\e[0m\n\n" "$OUTPUT"
+
+    if [ "$IS_YOUTUBE" = true ]; then
+        batch_options=("Yes, batch convert this playlist" "No, start over")
+    else
+        batch_options=("Yes, batch convert this folder" "No, start over")
+    fi
+    batch_sel=0
+
+    draw_batch_menu() {
+        for ((i=0; i<${#batch_options[@]}; i++)); do
+            printf "\r\033[K"
+            if [ $i -eq $batch_sel ]; then
+                printf "\e[36m>\e[0m \e[30;47m %s \e[0m\n" "${batch_options[$i]}"
+            else
+                printf "   %s \n" "${batch_options[$i]}"
+            fi
+        done
+        printf "\r\033[K\n\r\033[K\e[2m↑/↓ to choose   Enter to confirm\e[0m\n"
+    }
+    draw_batch_menu
+
+    while true; do
+        key=$(get_key)
+        if [[ "$key" == $'\e[A' || "$key" == $'\e[B' ]]; then
+            batch_sel=$((1 - batch_sel))
+            printf "\033[%dA" "$((${#batch_options[@]} + 2))"
+            draw_batch_menu
+        elif [[ "$key" == "" || "$key" == $'\n' || "$key" == $'\r' ]]; then
+            break
+        fi
+    done
+
+    [ "$batch_sel" -eq 0 ]
+}
 
 # Prints a small dot progress indicator for the 4-step wizard
 # (green/filled = done, cyan/filled = current, dim/hollow = upcoming).
@@ -272,6 +375,38 @@ is_back_key() {
         $'\x7f'|$'\x08'|$'\e[D'|b|B) return 0 ;;
         *) return 1 ;;
     esac
+}
+
+# Supported input container formats. (Deliberately NOT including .mpg/.mpeg:
+# that's this tool's own output format, so including it could cause a folder
+# to pick up files this same tool already produced on a prior run.)
+VIDEO_EXTENSIONS=(mp4 m4v mov mkv avi webm wmv flv ts m2ts mts 3gp 3g2 ogv)
+SUPPORTED_FORMATS_DISPLAY="MP4, MOV, M4V, MKV, AVI, WEBM, WMV, FLV, TS, M2TS, 3GP, OGV"
+
+# Scans a folder (non-recursively) for supported video files and populates
+# FILES_TO_PROCESS / FILE_COUNT / FILE_WORD. Shared by local folder input
+# and by the YouTube download folder, so both go through identical
+# discovery logic. Returns 1 (with FILES_TO_PROCESS empty) if nothing
+# supported was found.
+scan_video_folder() {
+    local dir="$1"
+    local ext file
+    local find_args=()
+    for ext in "${VIDEO_EXTENSIONS[@]}"; do
+        [ ${#find_args[@]} -gt 0 ] && find_args+=(-o)
+        find_args+=(-iname "*.${ext}")
+    done
+
+    FILES_TO_PROCESS=()
+    while IFS= read -r -d '' file; do
+        FILES_TO_PROCESS+=("$file")
+    done < <(find "$dir" -maxdepth 1 -type f \( "${find_args[@]}" \) -print0 | sort -z)
+
+    FILE_COUNT=${#FILES_TO_PROCESS[@]}
+    [ "$FILE_COUNT" -eq 1 ] && FILE_WORD="file" || FILE_WORD="files"
+
+    [ "$FILE_COUNT" -eq 0 ] && return 1
+    return 0
 }
 
 # ==========================================
@@ -423,6 +558,53 @@ draw_rockbox_screen() {
     printf "plugin, or as an H.264 file for Apple's own stock firmware.\n"
 }
 
+# ==========================================
+# SOURCE-TYPE GATE (local file/folder vs. YouTube download)
+# Asked once at the very top of the outer wizard loop, before the source
+# path prompt. Choosing YouTube swaps the usual path prompt for a URL
+# prompt, downloads into a temp folder via yt-dlp, then feeds that folder
+# into the exact same scan/batch/convert pipeline a local folder would use.
+# ==========================================
+source_options=("Convert a local video file or folder" "Download & convert from YouTube (video or playlist)")
+source_selected=0
+
+draw_source_menu() {
+    for ((i=0; i<${#source_options[@]}; i++)); do
+        printf "\r\033[K"
+        if [ $i -eq $source_selected ]; then
+            printf "\e[36m>\e[0m \e[30;47m %s \e[0m\n" "${source_options[$i]}"
+        else
+            printf "   %s \n" "${source_options[$i]}"
+        fi
+    done
+    printf "\r\033[K\n\r\033[K\e[2m↑/↓ to choose   Enter to select\e[0m\n"
+}
+
+# Checked lazily, only when the user actually picks the YouTube option -
+# same pattern as the libx264 check further down - so people who never
+# use this feature are never bothered about a dependency they don't need.
+check_yt_dlp() {
+    if command -v yt-dlp >/dev/null 2>&1; then
+        return 0
+    fi
+    clear
+    printf "\e[31mError: \e[1myt-dlp\e[22m isn't installed, so YouTube downloads\n"
+    printf "aren't available.\e[0m\n\n"
+    if [ "$BREW_INSTALLED" = true ]; then
+        echo "  brew install yt-dlp"
+    else
+        HINT=$(suggest_install yt-dlp)
+        [ -n "$HINT" ] && echo "  $HINT"
+        echo "  (or: pip install --user yt-dlp)"
+    fi
+    echo
+    printf "Press \e[1mEnter\e[22m to continue\n"
+    printf "\e[?25h"
+    read -r
+    printf "\e[?25l"
+    return 1
+}
+
 BACK_TO_SOURCE=false
 
 # Outer wizard loop: covers picking a source, picking a destination,
@@ -433,75 +615,125 @@ BACK_TO_SOURCE=false
 # destination can be reconsidered.
 while true; do
 
+IS_YOUTUBE=false
+[ -n "$YT_TEMP_DIR" ] && rm -rf "$YT_TEMP_DIR" 2>/dev/null
+YT_TEMP_DIR=""
+
+draw_header
+printf "\e[1mWhat would you like to convert?\e[0m\n\n"
+draw_source_menu
+
 while true; do
-    draw_header
-    IS_BATCH=false
-    printf "\e[?25h"
-    read -r -p "Enter path to source video or folder: " INPUT
-    printf "\e[?25l"
-    INPUT="${INPUT%\"}"
-    INPUT="${INPUT#\"}"
-    INPUT=$(echo "$INPUT" | sed 's/\\//g')
-    [ -z "$INPUT" ] && echo "No input provided." && sleep 1 && continue
-    
-    if [ -d "$INPUT" ]; then
-        if [ ! -r "$INPUT" ]; then
-            printf "\e[31mCan't read the folder \"%s\" - check its permissions.\e[0m\n" "$(basename "$INPUT")"
-            sleep 1.8
-            continue
-        fi
-        FOLDER_NAME=$(basename "$INPUT")
-
-        # Supported input container formats. (Deliberately NOT including .mpg/.mpeg:
-        # that's this tool's own output format, so including it could cause a folder
-        # to pick up files this same tool already produced on a prior run.)
-        VIDEO_EXTENSIONS=(mp4 m4v mov mkv avi webm wmv flv ts m2ts mts 3gp 3g2 ogv)
-        SUPPORTED_FORMATS_DISPLAY="MP4, MOV, M4V, MKV, AVI, WEBM, WMV, FLV, TS, M2TS, 3GP, OGV"
-
-        FIND_NAME_ARGS=()
-        for ext in "${VIDEO_EXTENSIONS[@]}"; do
-            [ ${#FIND_NAME_ARGS[@]} -gt 0 ] && FIND_NAME_ARGS+=(-o)
-            FIND_NAME_ARGS+=(-iname "*.${ext}")
-        done
-
-        # Scan for supported video files right away, so the confirmation
-        # reflects what's actually in the folder instead of asking blind.
-        FILES_TO_PROCESS=()
-        while IFS= read -r -d '' file; do
-            FILES_TO_PROCESS+=("$file")
-        done < <(find "$INPUT" -maxdepth 1 -type f \( "${FIND_NAME_ARGS[@]}" \) -print0 | sort -z)
-
-        if [ ${#FILES_TO_PROCESS[@]} -eq 0 ]; then
-            printf "\e[31mNo supported video files found in \"%s\".\e[0m\n\n" "$FOLDER_NAME"
-            printf "\e[2mSupported formats: %s\e[0m\n\n" "$SUPPORTED_FORMATS_DISPLAY"
-            printf "\e[2mReturning to path entry...\e[0m\n"
-            sleep 2.2
-            continue
-        fi
-
-        FILE_COUNT=${#FILES_TO_PROCESS[@]}
-        [ "$FILE_COUNT" -eq 1 ] && FILE_WORD="file" || FILE_WORD="files"
-
-        IS_BATCH=true
+    key=$(get_key)
+    if [[ "$key" == $'\e[A' || "$key" == $'\e[B' ]]; then
+        source_selected=$((1 - source_selected))
+        printf "\033[%dA" "$((${#source_options[@]} + 2))"
+        draw_source_menu
+    elif [[ "$key" == "" || "$key" == $'\n' || "$key" == $'\r' ]]; then
         break
-    elif [ -f "$INPUT" ]; then
-        if [ ! -r "$INPUT" ]; then
-            printf "\e[31mCan't read \"%s\" - check the file's permissions.\e[0m\n" "$(basename "$INPUT")"
-            sleep 1.8
-            continue
-        fi
-        IS_BATCH=false
-        break
-    elif [ -e "$INPUT" ]; then
-        printf "\e[31m\"%s\" isn't a file or folder this tool can use.\e[0m\n" "$(basename "$INPUT")"
-        sleep 1.8
-        continue
-    else
-        echo "Path doesn't exist."
-        sleep 1
-        continue
     fi
 done
+
+if [ $source_selected -eq 1 ]; then
+    # ---------- YouTube branch ----------
+    # Only the URL is collected here. The actual download is deliberately
+    # deferred until every other question (destination, Rockbox gate,
+    # hardware, fitting, volume) has been answered, so the download runs
+    # once - right before conversion starts - instead of making the user
+    # wait for it immediately after typing a URL.
+    if ! check_yt_dlp; then
+        continue # missing dependency: back to the top of the outer loop
+    fi
+
+    YT_BACK=false
+    while true; do
+        draw_header
+        printf "\e[?25h"
+        read -r -p "Enter YouTube video or playlist URL: " YT_URL
+        printf "\e[?25l"
+        YT_URL="${YT_URL%\"}"
+        YT_URL="${YT_URL#\"}"
+        YT_URL_LOWER=$(printf '%s' "$YT_URL" | tr '[:upper:]' '[:lower:]')
+        if [[ "$YT_URL_LOWER" == "b" || "$YT_URL_LOWER" == "back" ]]; then
+            YT_BACK=true
+            break
+        fi
+        if [ -z "$YT_URL" ]; then
+            show_error "No URL provided."
+            continue
+        fi
+        if [[ "$YT_URL" != http://* && "$YT_URL" != https://* ]]; then
+            show_error "That doesn't look like a URL."
+            continue
+        fi
+        break
+    done
+
+    if [ "$YT_BACK" = true ]; then
+        continue # back out to the source-type gate
+    fi
+
+    # IS_BATCH is set now (even though nothing's downloaded yet) so the
+    # rest of the wizard - and the output-path handling further down -
+    # treats the destination as a folder, same as a local batch job.
+    YT_PLAYLIST_NAME=$(yt-dlp --flat-playlist --playlist-items 1 --print "%(playlist_title)s" "$YT_URL" 2>/dev/null | head -n 1)
+    [ -z "$YT_PLAYLIST_NAME" ] && YT_PLAYLIST_NAME="YouTube download"
+    FOLDER_NAME="$YT_PLAYLIST_NAME"
+    IS_BATCH=true
+    IS_YOUTUBE=true
+else
+    # ---------- Local file/folder branch ----------
+    while true; do
+        draw_header
+        IS_BATCH=false
+        printf "\e[?25h"
+        read -r -p "Enter path to source video or folder: " INPUT
+        printf "\e[?25l"
+        INPUT="${INPUT%\"}"
+        INPUT="${INPUT#\"}"
+        INPUT=$(echo "$INPUT" | sed 's/\\//g')
+        if [ -z "$INPUT" ]; then
+            show_error "No input provided."
+            continue
+        fi
+
+        if [ -d "$INPUT" ]; then
+            if [ ! -r "$INPUT" ]; then
+                show_error "Can't read the folder \"$(basename "$INPUT")\" - check its permissions."
+                continue
+            fi
+            FOLDER_NAME=$(basename "$INPUT")
+
+            # Scan for supported video files right away, so the confirmation
+            # reflects what's actually in the folder instead of asking blind.
+            if ! scan_video_folder "$INPUT"; then
+                printf "\n\e[31mError: No supported video files found in \"%s\".\e[0m\n\n" "$FOLDER_NAME"
+                printf "\e[2mSupported formats: %s\e[0m\n\n" "$SUPPORTED_FORMATS_DISPLAY"
+                printf "Press \e[1mEnter\e[22m to continue\n"
+                printf "\e[?25h"
+                read -r
+                printf "\e[?25l"
+                continue
+            fi
+
+            IS_BATCH=true
+            break
+        elif [ -f "$INPUT" ]; then
+            if [ ! -r "$INPUT" ]; then
+                show_error "Can't read \"$(basename "$INPUT")\" - check the file's permissions."
+                continue
+            fi
+            IS_BATCH=false
+            break
+        elif [ -e "$INPUT" ]; then
+            show_error "\"$(basename "$INPUT")\" isn't a file or folder this tool can use."
+            continue
+        else
+            show_error "Path doesn't exist."
+            continue
+        fi
+    done
+fi
 
 echo
 
@@ -517,7 +749,10 @@ while true; do
         BACK_TO_SOURCE=true
         break
     fi
-    [ -z "$OUTPUT" ] && echo "No output provided." && exit 1
+    if [ -z "$OUTPUT" ]; then
+        show_error "No output provided."
+        continue
+    fi
     break
 done
 
@@ -526,44 +761,10 @@ if [ "$BACK_TO_SOURCE" = true ]; then
     continue
 fi
 
-if [ "$IS_BATCH" = true ]; then
-    clear
-    printf "\e[1mAre you sure you want to batch convert \"%s\"?\e[0m\n" "$FOLDER_NAME"
-    printf "\e[2m%s video %s found\e[0m\n" "$FILE_COUNT" "$FILE_WORD"
-    printf "\e[2mOutput to: %s\e[0m\n\n" "$OUTPUT"
-
-    batch_options=("Yes, batch convert this folder" "No, start over")
-    batch_sel=0
-
-    draw_batch_menu() {
-        for ((i=0; i<${#batch_options[@]}; i++)); do
-            printf "\r\033[K"
-            if [ $i -eq $batch_sel ]; then
-                printf "\e[36m>\e[0m \e[30;47m %s \e[0m\n" "${batch_options[$i]}"
-            else
-                printf "   %s \n" "${batch_options[$i]}"
-            fi
-        done
-        printf "\r\033[K\n\r\033[K\e[2m↑/↓ to choose   Enter to confirm\e[0m\n"
-    }
-    draw_batch_menu
-
-    while true; do
-        key=$(get_key)
-        if [[ "$key" == $'\e[A' || "$key" == $'\e[B' ]]; then # Up/Down toggles between the 2 options
-            batch_sel=$((1 - batch_sel))
-            printf "\033[%dA" "$((${#batch_options[@]} + 2))"
-            draw_batch_menu
-        elif [[ "$key" == "" || "$key" == $'\n' || "$key" == $'\r' ]]; then # Enter key
-            break
-        fi
-    done
-
-    if [ $batch_sel -eq 0 ]; then
-        : # confirmed: fall through to the preset menus below
-    else
+if [ "$IS_BATCH" = true ] && [ "$IS_YOUTUBE" != true ]; then
+    if ! confirm_batch_conversion; then
         clear
-        continue # declined: restart the outer wizard loop (re-prompt source AND destination)
+        continue
     fi
 fi
 
@@ -615,8 +816,8 @@ while [ "$MENU_STEP" -ge 1 ] && [ "$MENU_STEP" -le 4 ]; do
 
                         if ! ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libx264; then
                             clear
-                            printf "\e[41m Error: \e[0m Your \e[1mffmpeg\e[22m build doesn't include \e[1mlibx264\e[22m,\n"
-                            printf "which is required to encode H.264 for official Apple firmware.\n"
+                            printf "\e[41m Error: \e[0m \e[31mYour \e[1mffmpeg\e[22m build doesn't include \e[1mlibx264\e[22m,\e[0m\n"
+                            printf "\e[31mwhich is required to encode H.264 for official Apple firmware.\e[0m\n"
                             [ "$BREW_INSTALLED" = true ] && echo && echo "brew reinstall ffmpeg"
                             echo
                             printf "\e[30;47m> [OK]\e[0m\n"
@@ -750,6 +951,138 @@ done
 
 if [ "$MENU_STEP" -eq 0 ]; then
     continue # back out of Step 1: re-prompt source AND destination
+fi
+
+# ==========================================
+# YOUTUBE DOWNLOAD (deferred until now - every question has been
+# answered, so this runs once, right before conversion, and conversion
+# begins immediately once it finishes with no further prompts).
+# ==========================================
+if [ "$IS_YOUTUBE" = true ]; then
+    # Videos and playlists both land in the same temp folder; cleanup()
+    # (and the block below once the download resolves) removes it so
+    # nothing lingers on disk once conversion is done.
+    YT_TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/ipod-yt-XXXXXX")
+    YT_LOG=$(mktemp)
+
+    clear
+    printf "\e[1mDownloading from YouTube...\e[0m\n\n"
+
+    # -f "bv*+ba/b" grabs the best available video+audio (falling back to
+    # the best combined stream); it's re-encoded to iPod spec a moment
+    # later regardless, so this just maximizes source quality going in.
+    # --merge-output-format mp4 guarantees ffprobe/ffmpeg downstream always
+    # see a container they understand, no matter what YouTube served.
+    # --newline forces one progress update per line (instead of the
+    # default carriage-return overwrite) so the loop below can tail and
+    # parse it, the same way the conversion step parses ffmpeg's -progress
+    # log. yt-dlp already handles playlist URLs transparently, downloading
+    # every entry into this same folder.
+    yt-dlp \
+        -f "bv*+ba/b" \
+        --merge-output-format mp4 \
+        --no-playlist-reverse \
+        --restrict-filenames \
+        --newline \
+        -o "$YT_TEMP_DIR/%(playlist_autonumber&{} - |)s%(title).150B.%(ext)s" \
+        "$YT_URL" > "$YT_LOG" 2>&1 &
+    YT_PID=$!
+
+    YT_LABEL_SHOWN=""
+    YT_BAR_INITIALIZED=false
+
+    while kill -0 $YT_PID 2>/dev/null; do
+        if [ -f "$YT_LOG" ]; then
+            ITEM_LINE=$(grep -a "Downloading item" "$YT_LOG" 2>/dev/null | tail -n 1)
+            YT_LABEL="Downloading from YouTube..."
+            if [ -n "$ITEM_LINE" ]; then
+                CUR_ITEM=$(echo "$ITEM_LINE" | sed -E 's/.*item ([0-9]+) of ([0-9]+).*/\1/')
+                TOT_ITEM=$(echo "$ITEM_LINE" | sed -E 's/.*item ([0-9]+) of ([0-9]+).*/\2/')
+                if [ "$TOT_ITEM" -gt 1 ] 2>/dev/null; then
+                    YT_LABEL="Downloading item $CUR_ITEM of $TOT_ITEM from YouTube..."
+                fi
+            fi
+
+            if [ "$YT_LABEL" != "$YT_LABEL_SHOWN" ]; then
+                clear
+                printf "\e[1m%s\e[0m\n\n" "$YT_LABEL"
+                YT_LABEL_SHOWN="$YT_LABEL"
+                YT_BAR_INITIALIZED=false
+            fi
+
+            LAST_LINE=$(grep -a '\[download\]' "$YT_LOG" 2>/dev/null | grep -a '%' | tail -n 1)
+            if [ -n "$LAST_LINE" ]; then
+                PCT=$(echo "$LAST_LINE" | grep -oE '[0-9]+\.[0-9]+%' | head -n 1 | tr -d '%' | cut -d. -f1)
+                [ -z "$PCT" ] && PCT=0
+                [ "$PCT" -gt 100 ] 2>/dev/null && PCT=100
+                [ "$PCT" -lt 0 ] 2>/dev/null && PCT=0
+
+                SPEED=$(echo "$LAST_LINE" | grep -oE 'at +[^ ]+' | awk '{print $2}')
+                [ -z "$SPEED" ] && SPEED="-- B/s"
+
+                ETA_STR=$(echo "$LAST_LINE" | grep -oE 'ETA +[0-9:]+' | awk '{print $2}')
+                [ -z "$ETA_STR" ] && ETA_STR="--:--"
+
+                SIZE_STR=$(echo "$LAST_LINE" | grep -oE 'of +~?[0-9.]+[KMGT]iB' | awk '{print $2}')
+                [ -z "$SIZE_STR" ] && SIZE_STR="?"
+
+                TOTAL_WIDTH=40
+                DONE_BLOCKS=$(( PCT * TOTAL_WIDTH / 100 ))
+                LEFT_BLOCKS=$((TOTAL_WIDTH - DONE_BLOCKS))
+
+                BAR=$(printf "%0.s█" $(seq 1 $DONE_BLOCKS 2>/dev/null))
+                SPACES=$(printf "%0.s░" $(seq 1 $LEFT_BLOCKS 2>/dev/null))
+
+                if [ "$YT_BAR_INITIALIZED" = true ]; then
+                    printf "\033[2A"
+                fi
+                printf "[%s%s]\033[K\n %d%% (%s) | Size: %s | ETA: %s\033[K\n" \
+                    "$BAR" "$SPACES" "$PCT" "$SPEED" "$SIZE_STR" "$ETA_STR"
+                YT_BAR_INITIALIZED=true
+            fi
+        fi
+        sleep 1
+    done
+
+    wait $YT_PID
+    YT_EXIT=$?
+    rm -f "$YT_LOG"
+
+    if [ $YT_EXIT -ne 0 ]; then
+        clear
+        printf "\e[31mThe YouTube download failed or was cancelled.\e[0m\n\n"
+        printf "\e[30;47m> [OK]\e[0m\n"
+        printf "\e[?25h"
+        read -r
+        printf "\e[?25l"
+        rm -rf "$YT_TEMP_DIR"
+        YT_TEMP_DIR=""
+        continue # back to the top of the outer loop (re-prompt everything)
+    fi
+
+    if ! scan_video_folder "$YT_TEMP_DIR"; then
+        clear
+        printf "\e[31mDownload finished, but no usable video files were found afterward.\e[0m\n\n"
+        printf "\e[30;47m> [OK]\e[0m\n"
+        printf "\e[?25h"
+        read -r
+        printf "\e[?25l"
+        rm -rf "$YT_TEMP_DIR"
+        YT_TEMP_DIR=""
+        continue
+    fi
+
+    if ! confirm_batch_conversion; then
+        clear
+        rm -rf "$YT_TEMP_DIR"
+        YT_TEMP_DIR=""
+        continue
+    fi
+
+    # Conversion reads from INPUT/FILES_TO_PROCESS below - point them at
+    # what just got downloaded, then fall straight through into encoding
+    # with no further prompts.
+    INPUT="$YT_TEMP_DIR"
 fi
 
 # All four steps confirmed - resolve the selections into concrete
@@ -921,11 +1254,11 @@ fi
 MKDIR_ERR=$(mkdir -p "$OUTPUT_WRITE_CHECK_DIR" 2>&1)
 if [ ! -w "$OUTPUT_WRITE_CHECK_DIR" ]; then
     clear
-    printf "\e[31mError:\e[0m Can't write to \"%s\".\n" "$OUTPUT_WRITE_CHECK_DIR"
+    printf "\e[31mError: Can't write to \"%s\".\e[0m\n" "$OUTPUT_WRITE_CHECK_DIR"
     if [ -n "$MKDIR_ERR" ]; then
-        printf "\e[2m%s\e[0m\n\n" "$MKDIR_ERR"
+        printf "\e[31m%s\e[0m\n\n" "$MKDIR_ERR"
     else
-        printf "Check the path exists and that you have permission to write there.\n\n"
+        printf "\e[31mCheck the path exists and that you have permission to write there.\e[0m\n\n"
     fi
     printf "\e[30;47m> [OK]\e[0m\n"
     printf "\e[?25h"
@@ -938,6 +1271,8 @@ CURRENT_FILE_INDEX=0
 SUCCESS_COUNT=0
 SKIPPED_COUNT=0
 RUN_START_TIME=$(date +%s)
+CONVERTED_FILES=() # "filename|size in MB" entries, shown in the finish screen
+TOTAL_OUTPUT_BYTES=0
 
 # Core Batch File Processing Loop
 for TARGET_INPUT in "${FILES_TO_PROCESS[@]}"; do
@@ -1066,18 +1401,7 @@ while kill -0 $FFMPEG_PID 2>/dev/null; do
             SPACES=$(printf "%0.s░" $(seq 1 $LEFT_BLOCKS 2>/dev/null))
 
             FILE_SIZE_MB="0.0"
-            if [ -f "$TARGET_OUTPUT" ]; then
-                if [[ "$OSTYPE" == "darwin"* ]]; then
-                    FILE_SIZE_BYTES=$(stat -f%z "$TARGET_OUTPUT" 2>/dev/null)
-                else
-                    FILE_SIZE_BYTES=$(stat -c%s "$TARGET_OUTPUT" 2>/dev/null)
-                fi
-
-                if [ ! -z "$FILE_SIZE_BYTES" ]; then
-                    FILE_SIZE_MB=$(echo "scale=1; $FILE_SIZE_BYTES / 1048576" | bc -l)
-                    [[ "$FILE_SIZE_MB" == .* ]] && FILE_SIZE_MB="0$FILE_SIZE_MB"
-                fi
-            fi
+            [ -f "$TARGET_OUTPUT" ] && FILE_SIZE_MB=$(get_file_size_mb "$TARGET_OUTPUT")
 
             CURRENT_TIME=$(date +%s)
             ELAPSED=$((CURRENT_TIME - START_TIME))
@@ -1105,12 +1429,18 @@ FFMPEG_EXIT=$?
 
 if [ $FFMPEG_EXIT -eq 0 ] && [ -s "$TARGET_OUTPUT" ]; then
     ((SUCCESS_COUNT++))
+    OUTPUT_BYTES=$(get_file_size_bytes "$TARGET_OUTPUT")
+    [ -z "$OUTPUT_BYTES" ] && OUTPUT_BYTES=0
+    TOTAL_OUTPUT_BYTES=$((TOTAL_OUTPUT_BYTES + OUTPUT_BYTES))
+    CONVERTED_FILES+=("$(basename "$TARGET_OUTPUT")|$(get_file_size_mb "$TARGET_OUTPUT")")
 else
     printf "\n\e[31mFailed to convert %s:\e[0m\n" "$FILENAME"
     if [ -s "$ERROR_LOG" ]; then
+        printf "\e[31m"
         tail -n 4 "$ERROR_LOG" | sed 's/^/  /'
+        printf "\e[0m"
     else
-        echo "  ffmpeg exited with no error output (code $FFMPEG_EXIT)."
+        printf "\e[31m  ffmpeg exited with no error output (code %s).\e[0m\n" "$FFMPEG_EXIT"
     fi
     rm -f "$TARGET_OUTPUT" 2>/dev/null
     sleep 2.5
@@ -1129,6 +1459,8 @@ if [ $RUN_MIN -gt 0 ]; then
 else
     RUN_TIME_STR="${RUN_SEC}s"
 fi
+TOTAL_SIZE_MB=$(echo "scale=1; $TOTAL_OUTPUT_BYTES / 1048576" | bc -l)
+[[ "$TOTAL_SIZE_MB" == .* ]] && TOTAL_SIZE_MB="0$TOTAL_SIZE_MB"
 
 if [ $SUCCESS_COUNT -eq $TOTAL_FILES ]; then
     if [ "$IS_ROCKBOX" = true ]; then
@@ -1136,7 +1468,19 @@ if [ $SUCCESS_COUNT -eq $TOTAL_FILES ]; then
     else
         printf "\e[32mDone! All %d file(s) are ready to sync to your iPod.\e[0m\n" "$TOTAL_FILES"
     fi
-    printf "\e[2mFinished in %s\e[0m\n" "$RUN_TIME_STR"
+    printf "\e[2mFinished in %s\e[0m\n\n" "$RUN_TIME_STR"
+    printf "\e[1mTotal converted size: %s MB\e[0m\n\n" "$TOTAL_SIZE_MB"
+
+    if [ ${#CONVERTED_FILES[@]} -gt 0 ]; then
+        printf "\e[1mConverted files:\e[0m\n"
+        for ENTRY in "${CONVERTED_FILES[@]}"; do
+            ENTRY_NAME="${ENTRY%%|*}"
+            ENTRY_SIZE="${ENTRY##*|}"
+            printf "  \e[32m✓\e[0m %s \e[2m(%s MB)\e[0m\n" "$ENTRY_NAME" "$ENTRY_SIZE"
+        done
+        echo
+    fi
+
     # \e[37m sets text color to white
     printf "\e[37mSaved to: %s\e[0m\n\n" "$OUTPUT"
 
@@ -1153,8 +1497,19 @@ else
     if [ "$SKIPPED_COUNT" -gt 0 ]; then
         printf "\e[31m%d skipped as unsupported/unreadable.\e[0m\n" "$SKIPPED_COUNT"
     fi
-    printf "\e[2mFinished in %s\e[0m\n" "$RUN_TIME_STR"
-    echo
+    printf "\e[2mFinished in %s\e[0m\n\n" "$RUN_TIME_STR"
+    printf "\e[1mTotal converted size: %s MB\e[0m\n\n" "$TOTAL_SIZE_MB"
+
+    if [ ${#CONVERTED_FILES[@]} -gt 0 ]; then
+        printf "\e[1mConverted files:\e[0m\n"
+        for ENTRY in "${CONVERTED_FILES[@]}"; do
+            ENTRY_NAME="${ENTRY%%|*}"
+            ENTRY_SIZE="${ENTRY##*|}"
+            printf "  \e[32m✓\e[0m %s \e[2m(%s MB)\e[0m\n" "$ENTRY_NAME" "$ENTRY_SIZE"
+        done
+        echo
+    fi
+
     [ "$SUCCESS_COUNT" -gt 0 ] && printf "\e[37mSaved to: %s\e[0m\n\n" "$OUTPUT"
 fi
 
