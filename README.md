@@ -5,7 +5,6 @@ A free, open-source Bash utility for converting videos to formats compatible wit
 
 > [!NOTE]
 > This tool converts videos only. It does not install Rockbox or modify your iPod's firmware.
-
 <p align="center">
   <img width="480" height="377" alt="Usage-Example" src="https://github.com/user-attachments/assets/17179118-50a5-423d-b5ff-5bf71885a71d" />
 </p>
