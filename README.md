@@ -1,7 +1,7 @@
 # Universal iPod Video Converter
 A free, open-source Bash utility for converting videos to formats compatible with legacy clickwheel iPods. It supports both Rockbox MPEG-1 playback and official Apple firmware H.264 playback using FFmpeg-powered, device-specific presets.
 
-<img alt="Static Badge" src="https://img.shields.io/badge/github-Universal%20iPod%20Video%20Converter-blue?logo=github"> <img alt="GitHub top language" src="https://img.shields.io/github/languages/top/Mochagoma/Universal-iPod-Video-Converter">
+<img alt="Static Badge" src="https://img.shields.io/badge/github-Universal%20iPod%20Video%20Converter-green?logo=github"> <img alt="GitHub top language" src="https://img.shields.io/github/languages/top/Mochagoma/Universal-iPod-Video-Converter"> <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/Mochagoma/Universal-iPod-Video-Converter/total">
 
 > [!NOTE]
 > This tool converts videos only. It does not install Rockbox or modify your iPod's firmware.
