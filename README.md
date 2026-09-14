@@ -1,13 +1,7 @@
 # Universal iPod Video Converter
 A free, open-source Bash utility for converting videos to formats compatible with legacy clickwheel iPods. It supports both Rockbox MPEG-1 playback and official Apple firmware H.264 playback using FFmpeg-powered, device-specific presets.
 
-<div align="center">
-  <img alt="Static Badge" src="https://img.shields.io/badge/github-MIDI--to--Tone-green?style=flat-square&logo=github">
-  <img alt="GitHub top language" src="https://img.shields.io/github/languages/top/Mochagoma/MIDI-to-Tone?style=flat-square">
-  <img alt="Page Views" src="https://vbr.nathanchung.dev/badge?page_id=mochagoma.midi-to-tone&text=GitHub%20Page%20Visits&style=flat-square&color=9d00ff&lcolor=555555">
-  <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Mochagoma/MIDI-to-Tone?style=flat-square&color=%23FFFF00">
-  <img alt="GitHub Release" src="https://img.shields.io/github/v/release/Mochagoma/MIDI-to-Tone?style=flat-square">
-</div>
+<img alt="Static Badge" src="https://img.shields.io/badge/github-Universal%20iPod%20Video%20Converter-green?style=flat-square&logo=github"> <img alt="GitHub top language" src="https://img.shields.io/github/languages/top/Mochagoma/Universal-iPod-Video-Converter?style=flat-square"> <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/Mochagoma/Universal-iPod-Video-Converter/total?style=flat-square&color=9d00ff"> <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Mochagoma/Universal-iPod-Video-Converter?style=flat-square&color=%23FFFF00"> <img alt="GitHub Release" src="https://img.shields.io/github/v/release/Mochagoma/Universal-iPod-Video-Converter?style=flat-square">
 
 > [!NOTE]
 > This tool converts videos only. It does not install Rockbox or modify your iPod's firmware.
